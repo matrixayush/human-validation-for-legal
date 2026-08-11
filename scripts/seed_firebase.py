@@ -46,22 +46,36 @@ def delete_collection(db, collection_name):
     return len(docs)
 
 
-def seed_cases(excel_path, chunk_size=10, dry_run=False, reset=False, confirm_reset=False):
+def seed_cases(excel_path, test_excel_path, chunk_size=10, dry_run=False, reset=False, confirm_reset=False):
     if not os.path.exists(excel_path):
         print(f"Error: Dataset file not found at {excel_path}")
         sys.exit(1)
+    if not os.path.exists(test_excel_path):
+        print(f"Error: Test dataset file not found at {test_excel_path}")
+        sys.exit(1)
 
-    print(f"Loading dataset from: {excel_path} ...")
-    df = pd.read_excel(excel_path)
+    print(f"Loading test dataset from: {test_excel_path} ...")
+    test_df = pd.read_excel(test_excel_path)
+    print(f"Loading research dataset from: {excel_path} ...")
+    research_df = pd.read_excel(excel_path)
+
+    if list(test_df.columns) != list(research_df.columns):
+        raise ValueError('Test and research Excel files must have the same columns.')
+
+    test_case_count = len(test_df)
+    df = pd.concat([test_df, research_df], ignore_index=True)
     # Fill NaN values with empty strings
     df = df.fillna("")
     
     total_cases = len(df)
     total_chunks = (total_cases + chunk_size - 1) // chunk_size
-    print(f"Loaded {total_cases} cases. Splitting into {total_chunks} chunks of {chunk_size} cases each.")
+    print(f"Loaded {test_case_count} test cases and {len(research_df)} research cases ({total_cases} total).")
+    print(f"Splitting into {total_chunks} chunks of {chunk_size} cases each.")
 
     if dry_run:
         print("\n--- DRY RUN SUMMARY ---")
+        print(f"Test cases first: {test_case_count}")
+        print(f"Research cases after test cases: {len(research_df)}")
         print(f"Total cases to seed: {total_cases}")
         print(f"Columns present: {df.columns.tolist()}")
         print(f"First case filename: {df.iloc[0]['filename']}")
@@ -98,7 +112,8 @@ def seed_cases(excel_path, chunk_size=10, dry_run=False, reset=False, confirm_re
             "raw_model_response": str(row.get("raw_model_response", "")).strip(),
             "original_fine_problem": str(row.get("Fine /Problem", "")).strip(),
             "original_problem_desc": str(row.get("Please tell the problem ", "")).strip(),
-            "original_reviewer_info": str(row.get("Please provide your name and credentials; if you prefer to remain anonymous, please provide your credentials only.", "")).strip()
+            "original_reviewer_info": str(row.get("Please provide your name and credentials; if you prefer to remain anonymous, please provide your credentials only.", "")).strip(),
+            "dataset_phase": "test" if idx < test_case_count else "research"
         }
         
         batch.set(doc_ref, case_data)
@@ -114,10 +129,18 @@ def seed_cases(excel_path, chunk_size=10, dry_run=False, reset=False, confirm_re
         batch.commit()
         print(f"Committed final batch of {batch_count} cases.")
 
-    # Initialize system metadata counter for chunk assignment
+    # Preserve the current assignment position when expanding an existing test
+    # queue. This lets completed test reviewers keep their saved work while new
+    # research cases are appended after the test cases.
     system_ref = db.collection("system").document("chunk_assignment")
+    next_chunk_index = 0
+    if not reset:
+        existing_system = system_ref.get()
+        if existing_system.exists:
+            next_chunk_index = int(existing_system.to_dict().get("next_chunk_index", 0))
+
     system_ref.set({
-        "next_chunk_index": 0,
+        "next_chunk_index": next_chunk_index,
         "total_cases": total_cases,
         "chunk_size": chunk_size,
         "total_chunks": total_chunks,
@@ -125,16 +148,17 @@ def seed_cases(excel_path, chunk_size=10, dry_run=False, reset=False, confirm_re
     })
 
     print("\n[SUCCESS] Firestore Seeding Complete!")
-    print(f"Seeded {total_cases} cases into 'cases' collection.")
-    print(f"Initialized 'system/chunk_assignment' with next_chunk_index = 0.")
+    print(f"Seeded {total_cases} cases into 'cases' collection ({test_case_count} test, {len(research_df)} research).")
+    print(f"Initialized 'system/chunk_assignment' with next_chunk_index = {next_chunk_index}.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Seed Firebase Firestore with legal cases dataset.")
-    parser.add_argument("--excel", default="Data/qwen_pilot_500_human_validation.xlsx", help="Path to Excel dataset file")
+    parser.add_argument("--excel", default="Data/qwen_pilot_500_human_validation.xlsx", help="Path to the 500-case research Excel dataset")
+    parser.add_argument("--test-excel", default="Data/test_sample_50_cases.xlsx", help="Path to the 50-case test Excel dataset to assign first")
     parser.add_argument("--chunk-size", type=int, default=10, help="Number of cases per reviewer chunk (default: 10)")
     parser.add_argument("--dry-run", action="store_true", help="Validate file without writing to Firestore")
     parser.add_argument("--reset", action="store_true", help="Delete existing app cases, reviewers, and reviews before seeding")
     parser.add_argument("--confirm-reset", action="store_true", help="Required with --reset to confirm deletion of existing app review data")
     
     args = parser.parse_args()
-    seed_cases(args.excel, args.chunk_size, args.dry_run, args.reset, args.confirm_reset)
+    seed_cases(args.excel, args.test_excel, args.chunk_size, args.dry_run, args.reset, args.confirm_reset)

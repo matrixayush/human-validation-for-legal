@@ -3,7 +3,7 @@ Automated Test Suite for Reviewer Assignment Uniqueness & Data Chunk Shifting.
 Tests:
 1. Reviewer ID Uniqueness Enforcement
 2. Sequential Chunk Shifting (Chunk 0: cases 0..9, Chunk 1: cases 10..19, ...)
-3. Zero-overlap verification across 50 chunks
+3. Zero-overlap verification across all configured chunks
 4. Maximum assignment capacity boundary check
 """
 
@@ -21,7 +21,7 @@ class TestReviewerAssignment(unittest.TestCase):
         app.config['TESTING'] = True
         app_module.use_mock_db = True
         self.client = app.test_client()
-        # Initialize mock database with 500 cases (50 chunks)
+        # Initialize the mock database with the same 550-case queue as Firebase.
         init_mock_db(num_cases=500, chunk_size=10)
 
     def test_reviewer_id_uniqueness(self):
@@ -91,8 +91,8 @@ class TestReviewerAssignment(unittest.TestCase):
 
     def test_full_capacity_limit(self):
         """Test that registering after 50 chunks are assigned returns chunk exhausted error."""
-        # Set next_chunk_index to 50
-        mock_db['system']['next_chunk_index'] = 50
+        # Set next_chunk_index to the configured capacity.
+        mock_db['system']['next_chunk_index'] = mock_db['system']['total_chunks']
 
         res = self.client.post('/api/register', json={
             'reviewer_id': 'LateReviewer51',
@@ -104,7 +104,7 @@ class TestReviewerAssignment(unittest.TestCase):
         data = res.get_json()
         self.assertFalse(data['success'])
         self.assertIn("already been assigned", data['error'])
-        print("[SUCCESS] Successfully verified 50 chunk max capacity limit enforcement!")
+        print("[SUCCESS] Successfully verified configured chunk capacity limit enforcement!")
 
 if __name__ == '__main__':
     unittest.main()

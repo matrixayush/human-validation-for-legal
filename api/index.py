@@ -64,33 +64,24 @@ def init_mock_db(num_cases=500, chunk_size=10):
     
     loaded_cases = []
     
-    if os.path.exists(excel_path):
-        try:
-            import pandas as pd
-            df = pd.read_excel(excel_path).fillna("")
-            for idx, row in df.iterrows():
+    try:
+        import pandas as pd
+        # Match the Firebase queue order: the 50 test cases are assigned first,
+        # followed by the 500 research cases.
+        for dataset_path, dataset_name in ((test_excel_path, 'test'), (excel_path, 'research')):
+            if not os.path.exists(dataset_path):
+                continue
+            df = pd.read_excel(dataset_path).fillna("")
+            for _, row in df.iterrows():
                 loaded_cases.append({
-                    "case_index": int(idx),
+                    "case_index": len(loaded_cases),
                     "filename": str(row.get("filename", "")).strip(),
                     "text_main_info": str(row.get("text(main info of case)", "")).strip(),
-                    "raw_model_response": str(row.get("raw_model_response", "")).strip()
+                    "raw_model_response": str(row.get("raw_model_response", "")).strip(),
+                    "dataset_phase": dataset_name
                 })
-        except Exception as err:
-            print(f"Error loading production dataset for mock db: {err}")
-            
-    elif os.path.exists(test_excel_path):
-        try:
-            import pandas as pd
-            df = pd.read_excel(test_excel_path).fillna("")
-            for idx, row in df.iterrows():
-                loaded_cases.append({
-                    "case_index": int(idx),
-                    "filename": str(row.get("filename", "")).strip(),
-                    "text_main_info": str(row.get("text(main info of case)", "")).strip(),
-                    "raw_model_response": str(row.get("raw_model_response", "")).strip()
-                })
-        except Exception as err:
-            print(f"Error loading test dataset for mock db: {err}")
+    except Exception as err:
+        print(f"Error loading datasets for mock db: {err}")
 
     if not loaded_cases:
         # Generate synthetic fallback cases
@@ -162,7 +153,7 @@ def register_reviewer():
             if next_chunk >= total_chunks:
                 return jsonify({
                     'success': False,
-                    'error': 'All 50 review chunks have already been assigned.'
+                    'error': 'All review chunks have already been assigned.'
                 }), 400
 
             chunk_index = next_chunk
