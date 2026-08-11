@@ -141,6 +141,9 @@ def register_reviewer():
     if not reviewer_id:
         return jsonify({'success': False, 'error': 'Reviewer ID / Identifier is required.'}), 400
 
+    if not credentials:
+        return jsonify({'success': False, 'error': 'Genuine qualifications or professional credentials are required.'}), 400
+
     if use_mock_db:
         with mock_db_lock:
             # 1. Uniqueness check

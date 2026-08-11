@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const reviewerNameLabel = document.getElementById('reviewerNameLabel');
     const reviewerNameHelp = document.getElementById('reviewerNameHelp');
     const reviewerIdInput = document.getElementById('reviewerId');
+    const reviewerCredentialsInput = document.getElementById('reviewerCredentials');
+    const reviewerCredentialsHelp = document.getElementById('reviewerCredentialsHelp');
 
     const reviewerBadge = document.getElementById('reviewerBadge');
     const badgeReviewerId = document.getElementById('badgeReviewerId');
@@ -102,10 +104,16 @@ document.addEventListener('DOMContentLoaded', () => {
         hideError();
 
         const reviewerId = reviewerIdInput.value.trim();
+        const credentials = reviewerCredentialsInput.value.trim();
         const anonymous = isAnonymous.checked;
 
         if (!reviewerId) {
             showError(anonymous ? 'Please enter a unique anonymous username.' : 'Please enter your name.');
+            return;
+        }
+
+        if (!credentials) {
+            showError('Please enter your genuine qualifications or professional credentials.');
             return;
         }
 
@@ -119,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     reviewer_id: reviewerId,
                     name: reviewerId,
-                    credentials: '',
+                    credentials: credentials,
                     is_anonymous: anonymous
                 })
             });
@@ -151,11 +159,13 @@ document.addEventListener('DOMContentLoaded', () => {
             reviewerNameLabel.innerHTML = 'Enter a unique anonymous username <span class="required">*</span>';
             reviewerIdInput.placeholder = 'e.g. BlueTiger27';
             reviewerNameHelp.textContent = 'Choose a fake name you can use to continue this review later. It must be unique.';
+            reviewerCredentialsHelp.textContent = 'Please enter genuine credentials only; they are collected separately from your anonymous username.';
             reviewerIdInput.autocomplete = 'off';
         } else {
             reviewerNameLabel.innerHTML = 'Enter your name <span class="required">*</span>';
             reviewerIdInput.placeholder = 'e.g. Asha Sharma';
             reviewerNameHelp.textContent = 'Use the same name later if you need to continue an unfinished review on this device.';
+            reviewerCredentialsHelp.textContent = 'Please enter your genuine qualifications or professional credentials. Do not enter fake credentials.';
             reviewerIdInput.autocomplete = 'name';
         }
     });
