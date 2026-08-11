@@ -1,0 +1,28 @@
+# Firebase Credentials & Environment Secrets
+serviceAccountKey.json
+*.json.secret
+.env
+.env.local
+
+# Python cache & virtual environment
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+ENV/
+
+# OS & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Vercel build output
+.vercel/
+
+# Output exports (Keep Data/ original files tracked)
+Data/final_500_cases_validated.csv
+Data/final_500_cases_validated.xlsx

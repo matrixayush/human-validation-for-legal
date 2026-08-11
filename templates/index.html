@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Validation Web App — 500 Legal Cases</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-brand">
+                <div class="brand-icon">⚖️</div>
+                <div class="brand-text">
+                    <h1>Legal AI Human Validation</h1>
+                    <span class="brand-subtitle">500 Cases Benchmark Evaluation</span>
+                </div>
+            </div>
+            <div id="reviewerBadge" class="reviewer-badge hidden">
+                <span class="badge-label">Reviewer:</span>
+                <span id="badgeReviewerId" class="badge-value">--</span>
+                <span id="badgeChunk" class="badge-chunk">Chunk --</span>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Screen 1: Registration -->
+            <section id="registrationScreen" class="screen-card">
+                <div class="card-header">
+                    <h2>Reviewer Registration</h2>
+                    <p>Enter your details to receive your assigned set of 10 legal cases.</p>
+                </div>
+                
+                <form id="registrationForm" class="form-container">
+                    <div id="registrationError" class="alert-box error hidden"></div>
+
+                    <div class="form-group">
+                        <label for="reviewerId">Reviewer Unique ID / Handle <span class="required">*</span></label>
+                        <input type="text" id="reviewerId" placeholder="e.g. BlueTiger27 or LegalExpert_01" required autocomplete="off">
+                        <small class="help-text">Must be unique across all 50 reviewers.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reviewerCredentials">Qualifications / Credentials</label>
+                        <input type="text" id="reviewerCredentials" placeholder="e.g. LL.B., Senior Advocate, Legal Researcher">
+                    </div>
+
+                    <div class="form-group checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="isAnonymous">
+                            <span class="checkbox-custom"></span>
+                            <span>Remain anonymous in final published report</span>
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" id="btnRegister" class="btn btn-primary btn-large">
+                            Start Reviewing (Get 10 Cases) →
+                        </button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Screen 2: Case Reviewer Interface -->
+            <section id="reviewScreen" class="screen-card hidden">
+                <!-- Progress Header -->
+                <div class="review-progress-header">
+                    <div class="progress-info">
+                        <span id="caseStepIndicator">Case 1 of 10</span>
+                        <span id="globalCaseIndex" class="global-index">Overall Case #--</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div id="progressBar" class="progress-bar-fill" style="width: 10%;"></div>
+                    </div>
+                </div>
+
+                <!-- Case View Container -->
+                <div class="case-container">
+                    <!-- Case Title Header -->
+                    <div class="case-header-box">
+                        <div class="meta-label">CASE IDENTIFIER / FILENAME</div>
+                        <h3 id="displayFilename" class="case-filename">Loading...</h3>
+                    </div>
+
+                    <!-- Side-by-Side Grid for Text & Model Inference -->
+                    <div class="review-grid">
+                        <!-- Column 1: Main Case Text -->
+                        <div class="grid-card text-card">
+                            <div class="grid-card-title">
+                                <span class="card-icon">📜</span> Case Main Text
+                            </div>
+                            <div id="displayTextMainInfo" class="grid-card-body content-scrollable">
+                                Loading text...
+                            </div>
+                        </div>
+
+                        <!-- Column 2: Raw Model Response -->
+                        <div class="grid-card model-card">
+                            <div class="grid-card-title">
+                                <span class="card-icon">🤖</span> AI Model Inference
+                            </div>
+                            <div id="displayRawModelResponse" class="grid-card-body content-scrollable model-response-text">
+                                Loading model response...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Human Validation Form -->
+                    <div class="validation-panel">
+                        <h4 class="panel-title">Is the model inference correct? <span class="required">*</span></h4>
+                        
+                        <div class="segmented-control">
+                            <label class="segment-btn segment-fine">
+                                <input type="radio" name="reviewResult" value="Fine" id="radioFine">
+                                <span class="segment-content">
+                                    <span class="icon">✅</span>
+                                    <span class="label">Fine</span>
+                                </span>
+                            </label>
+
+                            <label class="segment-btn segment-problem">
+                                <input type="radio" name="reviewResult" value="Problem" id="radioProblem">
+                                <span class="segment-content">
+                                    <span class="icon">⚠️</span>
+                                    <span class="label">Problem</span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <!-- Problem Description (Dynamic) -->
+                        <div id="problemDescContainer" class="form-group problem-box hidden">
+                            <label for="problemDescription">What is the problem? <span class="required">*</span></label>
+                            <textarea id="problemDescription" rows="4" placeholder="Describe or copy-paste the incorrect inference section..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer Navigation -->
+                <div class="review-nav-footer">
+                    <button type="button" id="btnPrevCase" class="btn btn-secondary">
+                        ← Previous Case
+                    </button>
+
+                    <div class="nav-right">
+                        <button type="button" id="btnNextCase" class="btn btn-primary">
+                            Next Case →
+                        </button>
+
+                        <button type="button" id="btnSubmitAll" class="btn btn-success btn-large hidden">
+                            Submit All 10 Reviews ✓
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Screen 3: Completion Screen -->
+            <section id="completedScreen" class="screen-card hidden text-center">
+                <div class="completion-icon">🎉</div>
+                <h2>Review Completed Successfully!</h2>
+                <p>Thank you for contributing your expert human validation for this research benchmark.</p>
+                <div class="completion-details">
+                    <p>Your responses for all 10 assigned legal cases have been securely recorded in Firebase Firestore.</p>
+                </div>
+                <div class="form-actions center">
+                    <button type="button" onclick="location.reload()" class="btn btn-secondary">
+                        Return to Homepage
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Human Validation Benchmark Platform &bull; Powered by Flask + Firebase Firestore</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
