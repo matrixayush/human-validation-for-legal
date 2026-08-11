@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import datetime
 import threading
 from flask import Flask, render_template, request, jsonify
 from dotenv import load_dotenv
@@ -232,7 +233,12 @@ def register_reviewer():
             }
 
             transaction.set(reviewer_ref, reviewer_doc)
-            return (reviewer_doc, start_idx, end_idx), None
+            
+            # Create a JSON-serializable copy for response
+            response_reviewer = dict(reviewer_doc)
+            response_reviewer['assigned_at'] = datetime.datetime.utcnow().isoformat()
+            
+            return (response_reviewer, start_idx, end_idx), None
 
         transaction = db.transaction()
         result, err_msg = run_registration_transaction(transaction)

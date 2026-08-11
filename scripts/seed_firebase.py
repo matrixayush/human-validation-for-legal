@@ -6,17 +6,17 @@ Supports production Excel file ('Data/qwen_pilot_500_human_validation.xlsx') or 
 import os
 import sys
 import json
+import datetime
 import argparse
 import pandas as pd
 from dotenv import load_dotenv
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 # Load environment variables
 load_dotenv()
 
 def get_firestore_client():
-    import firebase_admin
-    from firebase_admin import credentials, firestore
-    
     if not firebase_admin._apps:
         cert_json_str = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
         cert_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "serviceAccountKey.json")

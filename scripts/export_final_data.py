@@ -78,6 +78,12 @@ def export_data(output_dir="Data"):
         reviewer_info = reviewers_map.get(reviewer_id, {})
         reviewer_name = reviewer_info.get("name", "") or reviewer_id
 
+        ts_val = review.get("submitted_at", "")
+        if ts_val and hasattr(ts_val, "isoformat"):
+            ts_val = ts_val.isoformat()
+        elif ts_val:
+            ts_val = str(ts_val)
+
         row = {
             "filename": c.get("filename", ""),
             "text(main info of case)": c.get("text_main_info", ""),
@@ -92,7 +98,7 @@ def export_data(output_dir="Data"):
             "is_anonymous": reviewer_info.get("is_anonymous", False),
             "review_result": review.get("review_result", ""),
             "problem_description": review.get("problem_description", ""),
-            "review_timestamp": review.get("submitted_at", "")
+            "review_timestamp": ts_val
         }
         merged_data.append(row)
 
