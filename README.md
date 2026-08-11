@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Human Validation Web App — 500 Legal Cases
 
 A streamlined, robust human validation web platform for 500 legal cases built with **Python (Flask)**, **Firebase Firestore**, and **Vercel** serverless hosting.
@@ -39,3 +40,6 @@ Open `http://localhost:5000` in your web browser.
 ## Documentation
 
 For full step-by-step instructions on obtaining Firebase keys, seeding your dataset, deploying to Vercel, and exporting results, refer to [FIREBASE_SETUP_GUIDE.md](FIREBASE_SETUP_GUIDE.md).
+=======
+# human-validation-for-legal
+>>>>>>> d96b6c68146edf019851d57c1747a8289cdd6373
