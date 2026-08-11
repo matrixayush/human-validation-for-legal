@@ -34,34 +34,34 @@
             <section id="registrationScreen" class="screen-card">
                 <div class="card-header">
                     <h2>Reviewer Registration</h2>
-                    <p>Enter your details to receive your assigned set of 10 legal cases.</p>
+                    <p>Enter your name to receive your assigned set of 10 legal cases.</p>
                 </div>
+
+                <aside class="research-notice" aria-label="Research participation notice">
+                    <h3>Research purpose</h3>
+                    <p>This is an internal research study. Please answer carefully, truthfully, and to the best of your knowledge. Take your time to read each case before responding.</p>
+                </aside>
                 
                 <form id="registrationForm" class="form-container">
                     <div id="registrationError" class="alert-box error hidden"></div>
 
                     <div class="form-group">
-                        <label for="reviewerId">Reviewer Unique ID / Handle <span class="required">*</span></label>
-                        <input type="text" id="reviewerId" placeholder="e.g. BlueTiger27 or LegalExpert_01" required autocomplete="off">
-                        <small class="help-text">Must be unique across all 50 reviewers.</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="reviewerCredentials">Qualifications / Credentials</label>
-                        <input type="text" id="reviewerCredentials" placeholder="e.g. LL.B., Senior Advocate, Legal Researcher">
+                        <label id="reviewerNameLabel" for="reviewerId">Enter your name <span class="required">*</span></label>
+                        <input type="text" id="reviewerId" placeholder="e.g. Asha Sharma" required autocomplete="name">
+                        <small id="reviewerNameHelp" class="help-text">Use the same name later if you need to continue an unfinished review on this device.</small>
                     </div>
 
                     <div class="form-group checkbox-group">
                         <label class="checkbox-label">
                             <input type="checkbox" id="isAnonymous">
                             <span class="checkbox-custom"></span>
-                            <span>Remain anonymous in final published report</span>
+                            <span>Remain anonymous</span>
                         </label>
                     </div>
 
                     <div class="form-actions">
                         <button type="submit" id="btnRegister" class="btn btn-primary btn-large">
-                            Start Reviewing (Get 10 Cases) →
+                            Start or Resume Reviewing →
                         </button>
                     </div>
                 </form>
@@ -131,6 +131,13 @@
                                     <span class="label">Problem</span>
                                 </span>
                             </label>
+                            <label class="segment-btn segment-unclear">
+                                <input type="radio" name="reviewResult" value="Unclear/Vague" id="radioUnclear">
+                                <span class="segment-content">
+                                    <span class="icon">?</span>
+                                    <span class="label">Don't know / unclear</span>
+                                </span>
+                            </label>
                         </div>
 
                         <!-- Problem Description (Dynamic) -->
@@ -153,19 +160,32 @@
                         </button>
 
                         <button type="button" id="btnSubmitAll" class="btn btn-success btn-large hidden">
-                            Submit All 10 Reviews ✓
+                            Review All Answers
                         </button>
                     </div>
                 </div>
             </section>
 
-            <!-- Screen 3: Completion Screen -->
+            <!-- Screen 3: Final response review -->
+            <section id="finalReviewScreen" class="screen-card hidden">
+                <div class="card-header">
+                    <h2>Review Your Answers</h2>
+                    <p>Please check your responses before submitting them for review. You can still edit any case.</p>
+                </div>
+                <div id="reviewSummary" class="review-summary" aria-live="polite"></div>
+                <div class="review-nav-footer">
+                    <button type="button" id="btnBackToCases" class="btn btn-secondary">Back to Cases</button>
+                    <button type="button" id="btnSubmitForReview" class="btn btn-success btn-large">Submit for Review</button>
+                </div>
+            </section>
+
+            <!-- Screen 4: Thank-you screen -->
             <section id="completedScreen" class="screen-card hidden text-center">
                 <div class="completion-icon">🎉</div>
-                <h2>Review Completed Successfully!</h2>
-                <p>Thank you for contributing your expert human validation for this research benchmark.</p>
+                <h2>Thank You for Your Great Help!</h2>
+                <p>Your review has been submitted successfully.</p>
                 <div class="completion-details">
-                    <p>Your responses for all 10 assigned legal cases have been securely recorded in Firebase Firestore.</p>
+                    <p>Your responses for all 10 assigned legal cases have been securely recorded. Your help is very valuable to this research benchmark.</p>
                 </div>
                 <div class="form-actions center">
                     <button type="button" onclick="location.reload()" class="btn btn-secondary">

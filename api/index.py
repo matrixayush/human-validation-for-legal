@@ -147,6 +147,7 @@ def register_reviewer():
             if reviewer_id in mock_db['reviewers']:
                 return jsonify({
                     'success': False,
+                    'existing_reviewer': True,
                     'error': 'This reviewer ID is already being used. Please choose another unique ID.'
                 }), 400
             
@@ -176,6 +177,7 @@ def register_reviewer():
                 'chunk_index': chunk_index,
                 'start_index': start_idx,
                 'end_index': end_idx,
+                'total_chunks': total_chunks,
                 'status': 'in_progress'
             }
 
@@ -198,12 +200,12 @@ def register_reviewer():
             # 1. Check if reviewer doc already exists
             reviewer_snapshot = reviewer_ref.get(transaction=transaction)
             if reviewer_snapshot.exists:
-                return None, 'This reviewer ID is already being used. Please choose another unique ID.'
+                return None, 'This reviewer ID is already being used. Please choose another unique ID.', True
 
             # 2. Read system chunk counter
             sys_snapshot = sys_ref.get(transaction=transaction)
             if not sys_snapshot.exists:
-                return None, 'System configuration doc system/chunk_assignment not initialized. Please run seed script.'
+                return None, 'System configuration doc system/chunk_assignment not initialized. Please run seed script.', False
 
             sys_data = sys_snapshot.to_dict()
             next_chunk = sys_data.get('next_chunk_index', 0)
@@ -212,7 +214,7 @@ def register_reviewer():
             total_cases = sys_data.get('total_cases', 500)
 
             if next_chunk >= total_chunks:
-                return None, 'All 50 review chunks have already been assigned.'
+                return None, 'All review chunks have already been assigned.', False
 
             chunk_index = next_chunk
             transaction.update(sys_ref, {'next_chunk_index': next_chunk + 1})
@@ -228,6 +230,7 @@ def register_reviewer():
                 'chunk_index': chunk_index,
                 'start_index': start_idx,
                 'end_index': end_idx,
+                'total_chunks': total_chunks,
                 'status': 'in_progress',
                 'assigned_at': firestore.SERVER_TIMESTAMP
             }
@@ -238,13 +241,13 @@ def register_reviewer():
             response_reviewer = dict(reviewer_doc)
             response_reviewer['assigned_at'] = datetime.datetime.utcnow().isoformat()
             
-            return (response_reviewer, start_idx, end_idx), None
+            return (response_reviewer, start_idx, end_idx), None, False
 
         transaction = db.transaction()
-        result, err_msg = run_registration_transaction(transaction)
+        result, err_msg, existing_reviewer = run_registration_transaction(transaction)
 
         if err_msg:
-            return jsonify({'success': False, 'error': err_msg}), 400
+            return jsonify({'success': False, 'error': err_msg, 'existing_reviewer': existing_reviewer}), 400
 
         reviewer_doc, start_idx, end_idx = result
 

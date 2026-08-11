@@ -6,11 +6,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const registrationScreen = document.getElementById('registrationScreen');
     const reviewScreen = document.getElementById('reviewScreen');
+    const finalReviewScreen = document.getElementById('finalReviewScreen');
     const completedScreen = document.getElementById('completedScreen');
 
     const registrationForm = document.getElementById('registrationForm');
     const registrationError = document.getElementById('registrationError');
     const btnRegister = document.getElementById('btnRegister');
+    const isAnonymous = document.getElementById('isAnonymous');
+    const reviewerNameLabel = document.getElementById('reviewerNameLabel');
+    const reviewerNameHelp = document.getElementById('reviewerNameHelp');
+    const reviewerIdInput = document.getElementById('reviewerId');
 
     const reviewerBadge = document.getElementById('reviewerBadge');
     const badgeReviewerId = document.getElementById('badgeReviewerId');
@@ -27,12 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const radioFine = document.getElementById('radioFine');
     const radioProblem = document.getElementById('radioProblem');
+    const radioUnclear = document.getElementById('radioUnclear');
     const problemDescContainer = document.getElementById('problemDescContainer');
     const problemDescription = document.getElementById('problemDescription');
 
     const btnPrevCase = document.getElementById('btnPrevCase');
     const btnNextCase = document.getElementById('btnNextCase');
     const btnSubmitAll = document.getElementById('btnSubmitAll');
+    const reviewSummary = document.getElementById('reviewSummary');
+    const btnBackToCases = document.getElementById('btnBackToCases');
+    const btnSubmitForReview = document.getElementById('btnSubmitForReview');
 
     // Application State
     let currentReviewer = null;
@@ -58,6 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success) {
                 currentReviewer = data.reviewer;
                 assignedCases = data.cases;
+                localStorage.setItem('legal_reviewer_id', reviewerId);
                 
                 // Load local draft reviews
                 loadLocalDraft(reviewerId);
@@ -91,12 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         hideError();
 
-        const reviewerId = document.getElementById('reviewerId').value.trim();
-        const credentials = document.getElementById('reviewerCredentials').value.trim();
-        const isAnonymous = document.getElementById('isAnonymous').checked;
+        const reviewerId = reviewerIdInput.value.trim();
+        const anonymous = isAnonymous.checked;
 
         if (!reviewerId) {
-            showError('Reviewer Unique ID is required.');
+            showError(anonymous ? 'Please enter a unique anonymous username.' : 'Please enter your name.');
             return;
         }
 
@@ -110,8 +119,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     reviewer_id: reviewerId,
                     name: reviewerId,
-                    credentials: credentials,
-                    is_anonymous: isAnonymous
+                    credentials: '',
+                    is_anonymous: anonymous
                 })
             });
 
@@ -124,6 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 renderReviewerBadge();
                 startReviewFlow();
+            } else if (data.existing_reviewer) {
+                await resumeSession(reviewerId);
             } else {
                 showError(data.error || 'Failed to register reviewer.');
             }
@@ -135,10 +146,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    isAnonymous.addEventListener('change', () => {
+        if (isAnonymous.checked) {
+            reviewerNameLabel.innerHTML = 'Enter a unique anonymous username <span class="required">*</span>';
+            reviewerIdInput.placeholder = 'e.g. BlueTiger27';
+            reviewerNameHelp.textContent = 'Choose a fake name you can use to continue this review later. It must be unique.';
+            reviewerIdInput.autocomplete = 'off';
+        } else {
+            reviewerNameLabel.innerHTML = 'Enter your name <span class="required">*</span>';
+            reviewerIdInput.placeholder = 'e.g. Asha Sharma';
+            reviewerNameHelp.textContent = 'Use the same name later if you need to continue an unfinished review on this device.';
+            reviewerIdInput.autocomplete = 'name';
+        }
+    });
+
     function renderReviewerBadge() {
         if (!currentReviewer) return;
         badgeReviewerId.textContent = currentReviewer.reviewer_id;
-        badgeChunk.textContent = `Chunk ${currentReviewer.chunk_index + 1} of 50`;
+        badgeChunk.textContent = `Chunk ${currentReviewer.chunk_index + 1} of ${currentReviewer.total_chunks || 50}`;
         reviewerBadge.classList.remove('hidden');
     }
 
@@ -173,9 +198,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (savedResponse.review_result === 'Problem') {
             radioProblem.checked = true;
             problemDescContainer.classList.remove('hidden');
+        } else if (savedResponse.review_result === 'Unclear/Vague') {
+            radioUnclear.checked = true;
+            problemDescContainer.classList.add('hidden');
         } else {
             radioFine.checked = false;
             radioProblem.checked = false;
+            radioUnclear.checked = false;
             problemDescContainer.classList.add('hidden');
         }
 
@@ -221,6 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let selectedResult = '';
         if (radioFine.checked) selectedResult = 'Fine';
         if (radioProblem.checked) selectedResult = 'Problem';
+        if (radioUnclear.checked) selectedResult = 'Unclear/Vague';
 
         reviewsDraft[currentCase.case_index] = {
             review_result: selectedResult,
@@ -248,7 +278,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const draft = reviewsDraft[currentCase.case_index];
 
         if (!draft || !draft.review_result) {
-            alert('Please select whether the model inference is "Fine" or a "Problem" before proceeding.');
+            alert('Please choose Fine, Problem, or Don\'t know / unclear before proceeding.');
             return false;
         }
 
@@ -279,8 +309,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Submit All Handler
-    btnSubmitAll.addEventListener('click', async () => {
+    // Move to the final review page after all ten responses are complete.
+    btnSubmitAll.addEventListener('click', () => {
         if (!validateCurrentCaseInput()) return;
 
         // Verify all 10 cases have responses
@@ -295,12 +325,59 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        if (!confirm('Are you sure you want to submit your 10 legal case reviews?')) {
-            return;
-        }
+        renderFinalReview();
+        showScreen(finalReviewScreen);
+    });
 
-        btnSubmitAll.disabled = true;
-        btnSubmitAll.textContent = 'Submitting Reviews...';
+    function renderFinalReview() {
+        reviewSummary.replaceChildren();
+
+        assignedCases.forEach((caseItem, index) => {
+            const draft = reviewsDraft[caseItem.case_index];
+            const row = document.createElement('article');
+            row.className = 'summary-row';
+
+            const caseInfo = document.createElement('div');
+            caseInfo.className = 'summary-case';
+            const title = document.createElement('strong');
+            title.textContent = `Case ${index + 1}`;
+            const filename = document.createElement('span');
+            filename.textContent = caseItem.filename || 'Untitled case';
+            caseInfo.append(title, filename);
+
+            const answer = document.createElement('span');
+            answer.className = 'summary-answer';
+            answer.textContent = draft.review_result === 'Unclear/Vague'
+                ? "Don't know / unclear or vague"
+                : draft.review_result;
+
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'btn btn-secondary';
+            editButton.textContent = 'Edit';
+            editButton.addEventListener('click', () => {
+                currentCasePointer = index;
+                showScreen(reviewScreen);
+                renderCurrentCase();
+            });
+
+            row.append(caseInfo, answer, editButton);
+            reviewSummary.append(row);
+        });
+    }
+
+    btnBackToCases.addEventListener('click', () => {
+        currentCasePointer = assignedCases.length - 1;
+        showScreen(reviewScreen);
+        renderCurrentCase();
+    });
+
+    // Submit only after the reviewer has checked the final answer summary.
+    btnSubmitForReview.addEventListener('click', async () => {
+        if (!confirm('Submit these 10 legal case reviews for final review?')) return;
+
+        btnSubmitForReview.disabled = true;
+        btnSubmitForReview.textContent = 'Submitting Reviews...';
 
         const payloadReviews = assignedCases.map(c => {
             const d = reviewsDraft[c.case_index];
@@ -333,14 +410,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) {
             alert('Server error occurred during submission. Please try again.');
         } finally {
-            btnSubmitAll.disabled = false;
-            btnSubmitAll.textContent = 'Submit All 10 Reviews ✓';
+            btnSubmitForReview.disabled = false;
+            btnSubmitForReview.textContent = 'Submit for Review';
         }
     });
 
     // Utility Screen Switcher
     function showScreen(targetScreen) {
-        [registrationScreen, reviewScreen, completedScreen].forEach(s => s.classList.add('hidden'));
+        [registrationScreen, reviewScreen, finalReviewScreen, completedScreen].forEach(s => s.classList.add('hidden'));
         targetScreen.classList.remove('hidden');
     }
 

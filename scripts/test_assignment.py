@@ -12,12 +12,14 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import api.index as app_module
 from api.index import app, mock_db, init_mock_db
 
 class TestReviewerAssignment(unittest.TestCase):
     def setUp(self):
         # Configure app for testing
         app.config['TESTING'] = True
+        app_module.use_mock_db = True
         self.client = app.test_client()
         # Initialize mock database with 500 cases (50 chunks)
         init_mock_db(num_cases=500, chunk_size=10)

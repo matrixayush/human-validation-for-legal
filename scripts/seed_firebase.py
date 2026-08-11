@@ -35,7 +35,18 @@ def get_firestore_client():
         
     return firestore.client()
 
-def seed_cases(excel_path, chunk_size=10, dry_run=False):
+def delete_collection(db, collection_name):
+    """Delete all documents in one app-owned Firestore collection in safe batches."""
+    docs = list(db.collection(collection_name).stream())
+    for start in range(0, len(docs), 450):
+        batch = db.batch()
+        for doc in docs[start:start + 450]:
+            batch.delete(doc.reference)
+        batch.commit()
+    return len(docs)
+
+
+def seed_cases(excel_path, chunk_size=10, dry_run=False, reset=False, confirm_reset=False):
     if not os.path.exists(excel_path):
         print(f"Error: Dataset file not found at {excel_path}")
         sys.exit(1)
@@ -58,7 +69,18 @@ def seed_cases(excel_path, chunk_size=10, dry_run=False):
         print("Dry run completed successfully. No data was written to Firebase.")
         return
 
+    if reset and not confirm_reset:
+        raise ValueError('Reset requires --confirm-reset because it deletes existing app review data.')
+
     db = get_firestore_client()
+
+    if reset:
+        print('Resetting app-owned Firebase collections...')
+        for collection_name in ('cases', 'reviewers', 'reviews'):
+            deleted = delete_collection(db, collection_name)
+            print(f"Deleted {deleted} document(s) from '{collection_name}'.")
+        db.collection('system').document('chunk_assignment').delete()
+
     cases_ref = db.collection("cases")
     
     print("Writing cases to Firestore collection 'cases'...")
@@ -111,6 +133,8 @@ if __name__ == "__main__":
     parser.add_argument("--excel", default="Data/qwen_pilot_500_human_validation.xlsx", help="Path to Excel dataset file")
     parser.add_argument("--chunk-size", type=int, default=10, help="Number of cases per reviewer chunk (default: 10)")
     parser.add_argument("--dry-run", action="store_true", help="Validate file without writing to Firestore")
+    parser.add_argument("--reset", action="store_true", help="Delete existing app cases, reviewers, and reviews before seeding")
+    parser.add_argument("--confirm-reset", action="store_true", help="Required with --reset to confirm deletion of existing app review data")
     
     args = parser.parse_args()
-    seed_cases(args.excel, args.chunk_size, args.dry_run)
+    seed_cases(args.excel, args.chunk_size, args.dry_run, args.reset, args.confirm_reset)

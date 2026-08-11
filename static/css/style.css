@@ -151,6 +151,19 @@ body {
     font-size: 0.95rem;
 }
 
+.research-notice {
+    max-width: 760px;
+    margin: 0 0 24px;
+    padding: 16px 18px;
+    border: 1px solid rgba(59, 130, 246, 0.55);
+    border-left: 4px solid var(--primary);
+    border-radius: var(--radius-sm);
+    background: var(--primary-light);
+}
+
+.research-notice h3 { margin-bottom: 4px; font-size: 0.95rem; }
+.research-notice p { color: #dbeafe; font-size: 0.92rem; }
+
 /* Form Controls */
 .form-container {
     display: flex;
@@ -416,8 +429,9 @@ input[type="text"]:focus, textarea:focus {
 
 .segmented-control {
     display: flex;
+    flex-wrap: wrap;
     gap: 16px;
-    max-width: 400px;
+    max-width: 720px;
 }
 
 .segment-btn {
@@ -459,6 +473,12 @@ input[type="text"]:focus, textarea:focus {
     margin-top: 16px;
 }
 
+.segment-unclear input:checked + .segment-content {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    color: #bfdbfe;
+}
+
 /* Review Footer Nav */
 .review-nav-footer {
     display: flex;
@@ -486,6 +506,52 @@ input[type="text"]:focus, textarea:focus {
 .completion-details {
     margin: 24px 0;
     color: var(--text-muted);
+}
+
+/* Final answer review */
+.review-summary {
+    display: grid;
+    gap: 12px;
+    margin-bottom: 28px;
+}
+
+.summary-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 16px;
+    background: var(--bg-card-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+}
+
+.summary-case { min-width: 0; }
+.summary-case strong, .summary-case span { display: block; }
+.summary-case span { color: var(--text-muted); font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.summary-answer { font-weight: 600; color: #bfdbfe; }
+
+@media (max-width: 640px) {
+    .app-container { padding: 14px; }
+    .app-header { align-items: flex-start; flex-direction: column; gap: 12px; margin-bottom: 18px; }
+    .brand-icon { font-size: 1.8rem; }
+    .brand-text h1 { font-size: 1.15rem; }
+    .reviewer-badge { flex-wrap: wrap; }
+    .screen-card { padding: 18px; }
+    .card-header h2 { font-size: 1.35rem; }
+    .research-notice { padding: 14px; }
+    .form-container { max-width: none; }
+    .form-actions, .form-actions .btn { width: 100%; }
+    .segmented-control { gap: 10px; }
+    .segment-btn { flex: 1 1 100%; }
+    .grid-card { height: auto; min-height: 260px; }
+    .review-progress-header { margin-bottom: 16px; }
+    .progress-info { align-items: flex-start; flex-direction: column; gap: 4px; }
+    .review-nav-footer .btn, .nav-right .btn { width: 100%; }
+    .nav-right { flex: 1; flex-direction: column; width: 100%; }
+    .summary-row { grid-template-columns: 1fr auto; }
+    .summary-answer { grid-column: 1 / -1; }
+    .review-nav-footer { align-items: stretch; flex-direction: column; gap: 12px; }
 }
 
 /* Footer */
