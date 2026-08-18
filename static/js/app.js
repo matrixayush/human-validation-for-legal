@@ -1,14 +1,11 @@
-/**
- * Human Validation Web App Frontend Application Script
- */
-
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
+    // Main Screens
     const registrationScreen = document.getElementById('registrationScreen');
     const reviewScreen = document.getElementById('reviewScreen');
     const finalReviewScreen = document.getElementById('finalReviewScreen');
     const completedScreen = document.getElementById('completedScreen');
 
+    // Benchmark DOM Elements
     const registrationForm = document.getElementById('registrationForm');
     const registrationError = document.getElementById('registrationError');
     const btnRegister = document.getElementById('btnRegister');
@@ -53,6 +50,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Check for saved session in localStorage
     initSession();
+
+
 
     function initSession() {
         const savedReviewerId = localStorage.getItem('legal_reviewer_id');

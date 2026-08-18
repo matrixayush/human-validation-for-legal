@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Human Validation Web App — 550 Legal Cases</title>
+    <title>Human Validation Web App — Legal Cases Benchmark</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -18,15 +18,18 @@
                 <div class="brand-icon">⚖️</div>
                 <div class="brand-text">
                     <h1>Legal AI Human Validation</h1>
-                    <span class="brand-subtitle">550-Case Research Evaluation (50 Test + 500 Research)</span>
+                    <span class="brand-subtitle">Legal Case Model Evaluation Platform</span>
                 </div>
             </div>
-            <div id="reviewerBadge" class="reviewer-badge hidden">
-                <span class="badge-label">Reviewer:</span>
-                <span id="badgeReviewerId" class="badge-value">--</span>
-                <span id="badgeChunk" class="badge-chunk">Chunk --</span>
+            <div class="header-right">
+                <div id="reviewerBadge" class="reviewer-badge hidden">
+                    <span class="badge-label">Reviewer:</span>
+                    <span id="badgeReviewerId" class="badge-value">--</span>
+                    <span id="badgeChunk" class="badge-chunk">Chunk --</span>
+                </div>
             </div>
         </header>
+
 
         <!-- Main Content Area -->
         <main class="main-content">
@@ -198,6 +201,7 @@
                         Return to Homepage
                     </button>
                 </div>
+
             </section>
         </main>
 
@@ -210,3 +214,4 @@
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
+

@@ -26,3 +26,4 @@ Thumbs.db
 # Output exports (Keep Data/ original files tracked)
 Data/final_500_cases_validated.csv
 Data/final_500_cases_validated.xlsx
+Data/collected_human_validations.csv

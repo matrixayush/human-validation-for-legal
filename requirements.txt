@@ -1,5 +1,8 @@
 Flask>=3.0.0
 firebase-admin>=6.2.0
+python-dotenv>=1.0.0
+
+# For local mock-mode fallback (Excel dataset loading) and seed scripts only
 pandas>=2.0.0
 openpyxl>=3.1.0
-python-dotenv>=1.0.0
+numpy<2.0.0

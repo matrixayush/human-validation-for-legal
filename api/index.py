@@ -57,18 +57,23 @@ def init_firebase():
         use_mock_db = True
         init_mock_db()
 
-def init_mock_db(num_cases=500, chunk_size=10):
+def init_mock_db(num_cases=50, chunk_size=10):
     global mock_db
     excel_path = os.path.join(os.path.dirname(__file__), '..', 'Data', 'qwen_pilot_500_human_validation.xlsx')
     test_excel_path = os.path.join(os.path.dirname(__file__), '..', 'Data', 'test_sample_50_cases.xlsx')
     
     loaded_cases = []
+    load_full = os.getenv("LOAD_FULL_DATASET", "false").lower() in ("true", "1", "yes")
+
+    # In local testing mode, default to 50 test sample cases for rapid multi-browser testing & data verification.
+    # When LOAD_FULL_DATASET=true or when deployed to Firebase, both 50 test + 500 research cases are included.
+    datasets_to_load = [ (test_excel_path, 'test') ]
+    if load_full:
+        datasets_to_load.append((excel_path, 'research'))
     
     try:
         import pandas as pd
-        # Match the Firebase queue order: the 50 test cases are assigned first,
-        # followed by the 500 research cases.
-        for dataset_path, dataset_name in ((test_excel_path, 'test'), (excel_path, 'research')):
+        for dataset_path, dataset_name in datasets_to_load:
             if not os.path.exists(dataset_path):
                 continue
             df = pd.read_excel(dataset_path).fillna("")
@@ -84,7 +89,7 @@ def init_mock_db(num_cases=500, chunk_size=10):
         print(f"Error loading datasets for mock db: {err}")
 
     if not loaded_cases:
-        # Generate synthetic fallback cases
+        # Generate 50 synthetic fallback cases for local testing
         for i in range(num_cases):
             loaded_cases.append({
                 "case_index": i,
@@ -105,6 +110,7 @@ def init_mock_db(num_cases=500, chunk_size=10):
         'total_cases': total_cases,
         'total_chunks': total_chunks
     }
+
 
 # Initialize database connection on load
 init_firebase()
@@ -323,6 +329,44 @@ def get_reviewer_session(reviewer_id):
             'saved_reviews': saved_reviews
         })
 
+def save_reviews_to_file(reviewer_id, reviewer_info, reviews):
+    """Appends submitted reviews directly to local Data/collected_human_validations.csv for file persistence."""
+    try:
+        data_dir = os.path.join(os.path.dirname(__file__), '..', 'Data')
+        os.makedirs(data_dir, exist_ok=True)
+        csv_file = os.path.join(data_dir, 'collected_human_validations.csv')
+        
+        file_exists = os.path.exists(csv_file)
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        import csv
+        with open(csv_file, mode='a', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow([
+                    'reviewer_id', 'reviewer_name', 'reviewer_credentials', 'is_anonymous',
+                    'case_id', 'case_index', 'filename', 'review_result', 'problem_description', 'submitted_at'
+                ])
+            
+            for item in reviews:
+                case_index = item.get('case_index')
+                case_id = f"case_{case_index:03d}" if case_index is not None else ""
+                writer.writerow([
+                    reviewer_id,
+                    reviewer_info.get('name', ''),
+                    reviewer_info.get('credentials', ''),
+                    reviewer_info.get('is_anonymous', False),
+                    case_id,
+                    case_index,
+                    item.get('filename', ''),
+                    item.get('review_result', ''),
+                    item.get('problem_description', ''),
+                    timestamp
+                ])
+        print(f"[SUCCESS] Saved {len(reviews)} reviews for '{reviewer_id}' directly to {csv_file}")
+    except Exception as err:
+        print(f"[ERROR] Failed to write reviews to file: {err}")
+
 @app.route('/api/submit', methods=['POST'])
 def submit_reviews():
     data = request.get_json() or {}
@@ -337,6 +381,7 @@ def submit_reviews():
             if reviewer_id not in mock_db['reviewers']:
                 return jsonify({'success': False, 'error': 'Reviewer not found.'}), 404
 
+            reviewer_info = mock_db['reviewers'][reviewer_id]
             for item in reviews:
                 case_index = item.get('case_index')
                 case_id = f"case_{case_index:03d}"
@@ -344,19 +389,27 @@ def submit_reviews():
                 
                 mock_db['reviews'][r_key] = {
                     'reviewer_id': reviewer_id,
+                    'reviewer_name': reviewer_info.get('name', ''),
+                    'reviewer_credentials': reviewer_info.get('credentials', ''),
+                    'is_anonymous': reviewer_info.get('is_anonymous', False),
                     'case_id': case_id,
                     'case_index': case_index,
                     'filename': item.get('filename'),
                     'review_result': item.get('review_result'),
                     'problem_description': item.get('problem_description', ''),
-                    'submitted_at': 'MOCK_TIMESTAMP'
+                    'submitted_at': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
 
             mock_db['reviewers'][reviewer_id]['status'] = 'completed'
-            return jsonify({'success': True, 'message': 'All 10 case reviews successfully submitted!'})
+            save_reviews_to_file(reviewer_id, reviewer_info, reviews)
+            return jsonify({'success': True, 'message': 'All 10 case reviews successfully recorded in database!'})
     else:
         from firebase_admin import firestore
         
+        rev_ref = db.collection('reviewers').document(reviewer_id)
+        rev_doc = rev_ref.get()
+        reviewer_info = rev_doc.to_dict() if rev_doc.exists else {}
+
         batch = db.batch()
         for item in reviews:
             case_index = item.get('case_index')
@@ -366,19 +419,22 @@ def submit_reviews():
             r_ref = db.collection('reviews').document(r_key)
             batch.set(r_ref, {
                 'reviewer_id': reviewer_id,
+                'reviewer_name': reviewer_info.get('name', ''),
+                'reviewer_credentials': reviewer_info.get('credentials', ''),
+                'is_anonymous': reviewer_info.get('is_anonymous', False),
                 'case_id': case_id,
                 'case_index': case_index,
-                'filename': item.get('filename'),
+                'filename': item.get('filename', ''),
                 'review_result': item.get('review_result'),
                 'problem_description': item.get('problem_description', ''),
                 'submitted_at': firestore.SERVER_TIMESTAMP
             })
 
-        rev_ref = db.collection('reviewers').document(reviewer_id)
         batch.update(rev_ref, {'status': 'completed', 'completed_at': firestore.SERVER_TIMESTAMP})
         batch.commit()
 
-        return jsonify({'success': True, 'message': 'All 10 case reviews successfully submitted!'})
+        return jsonify({'success': True, 'message': 'All 10 case reviews successfully recorded in Firestore!'})
+
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5000))
